@@ -8,6 +8,11 @@ MEMORY="4G"
 DISK="20G"
 KEEP_EXISTING=0
 
+# 你的 GitHub Raw 文件地址，替换成实际地址
+CLOUD_INIT_URL="https://raw.githubusercontent.com/b1tzer/dev-env-bootstrap/refs/heads/master/my-cloud-init.yaml"
+CLOUD_INIT_FILE="./my-cloud-init.yaml"
+
+
 log_info() {
   echo "[INFO] $*"
 }
@@ -23,6 +28,9 @@ usage() {
   -k             保留已有虚拟机，不删除，直接进入（如果不存在则创建）
   -n <vm_name>   指定虚拟机名称，默认: ubuntu-test
   -h             显示此帮助信息
+
+cloud-init 文件自动从预设 GitHub 地址下载：
+  $CLOUD_INIT_URL
 EOF
 }
 
@@ -53,6 +61,23 @@ parse_args() {
     esac
   done
   shift $((OPTIND - 1))
+}
+
+download_cloud_init() {
+  if [ -f "$CLOUD_INIT_FILE" ]; then
+    log_info "本地已存在 cloud-init 文件 $CLOUD_INIT_FILE，跳过下载"
+  else
+    log_info "开始下载 cloud-init 文件: $CLOUD_INIT_URL"
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL "$CLOUD_INIT_URL" -o "$CLOUD_INIT_FILE"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -qO "$CLOUD_INIT_FILE" "$CLOUD_INIT_URL"
+    else
+      log_error "系统缺少 curl 和 wget，无法下载 cloud-init 文件"
+      exit 1
+    fi
+    log_info "cloud-init 文件下载完成: $CLOUD_INIT_FILE"
+  fi
 }
 
 install_multipass_if_needed() {

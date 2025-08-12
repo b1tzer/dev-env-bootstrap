@@ -1,0 +1,52 @@
+#cloud-config
+
+users:
+  - name: ubuntu
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA...  # 替换成你的公钥
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - vim
+  - git
+  - curl
+  - wget
+  - htop
+  - zip
+  - unzip
+  - zsh
+  - apt-transport-https
+  - ca-certificates
+  - software-properties-common
+
+runcmd:
+  # 安装 Oh My Zsh
+  - sudo -u ubuntu sh -c "export RUNZSH=no; sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\""
+  
+  # 安装 zsh 插件
+  - sudo -u ubuntu git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+  - sudo -u ubuntu git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+  - sudo -u ubuntu git clone https://github.com/rupa/z.git ~/.oh-my-zsh/custom/plugins/z
+  
+  # 修改默认 shell 为 zsh
+  - chsh -s $(which zsh) ubuntu
+
+  # 修改 .zshrc 启用插件
+  - sudo -u ubuntu sed -i 's/plugins=(git)/plugins=(git z zsh-autosuggestions zsh-syntax-highlighting)/' /home/ubuntu/.zshrc
+
+  # 安装 Docker 官方仓库并安装 Docker
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io
+
+  # 启动 Docker 并设置开机启动
+  - systemctl enable docker
+  - systemctl start docker
+
+  # 将 ubuntu 用户加入 docker 组，避免使用 sudo 执行 docker
+  - usermod -aG docker ubuntu
